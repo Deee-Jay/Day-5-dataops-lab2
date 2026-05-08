@@ -38,7 +38,7 @@ isort==5.13.2              # Import statement sorting
 
 # === SECURITY ===
 safety==2.3.5              # Security vulnerability scanning
-cryptography==41.0.8       # Cryptographic functions for data encryption
+cryptography==42.0.8       # Cryptographic functions for data encryption
 
 # === PERFORMANCE MONITORING ===
 psutil==5.9.6              # System and process monitoring
