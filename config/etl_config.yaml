@@ -1,0 +1,199 @@
+# Healthcare Claims Processing ETL Configuration
+# ===============================================
+# This configuration file contains all settings for the ETL pipeline
+# including database connections, batch sizes, and validation rules
+
+# === DATABASE CONFIGURATION ===
+database:
+  # Source database (Hospital System)
+  source:
+    connection_string: "DRIVER={ODBC Driver 17 for SQL Server};SERVER=hospital-db-server;DATABASE=claims_db;UID=etl_user;PWD=secure_password;"
+    connection_timeout: 30
+    query_timeout: 300
+    
+  # Target database (Azure SQL)
+  target:
+    connection_string: "DRIVER={ODBC Driver 17 for SQL Server};SERVER=azure-sql-server.database.windows.net;DATABASE=healthcare_analytics;UID=azure_user;PWD=azure_secure_password;"
+    connection_timeout: 30
+    query_timeout: 600
+    table_name: "processed_claims"
+
+# === ETL PROCESSING CONFIGURATION ===
+etl:
+  # Batch processing settings
+  batch_size: 1000
+  max_retries: 3
+  retry_delay_seconds: 5
+  
+  # Processing windows
+  default_processing_days: 7
+  max_processing_days: 30
+  
+  # Performance settings
+  parallel_workers: 4
+  memory_limit_mb: 2048
+
+# === DATA VALIDATION RULES ===
+validation:
+  # Claim amount validation
+  max_claim_amount: 100000
+  min_claim_amount: 0
+  max_payment_ratio: 2.0
+  
+  # Date validation
+  max_future_days: 0
+  max_historical_days: 365
+  
+  # Required fields
+  required_fields:
+    - claim_id
+    - patient_id
+    - provider_id
+    - service_date
+    - procedure_code
+    - amount_billed
+  
+  # Code validation
+  valid_procedure_codes:
+    - "99213"  # Office visit
+    - "99214"  # Office visit
+    - "99215"  # Office visit
+    - "83036"  # Hemoglobin A1c
+    - "80053"  # Comprehensive metabolic panel
+    - "85025"  # Complete blood count
+    - "71020"  # Chest X-ray
+    - "74177"  # CT abdomen
+    
+  valid_diagnosis_codes:
+    - "I10"     # Hypertension
+    - "E11.9"   # Diabetes mellitus
+    - "J45.909" # Asthma
+    - "M54.5"   # Low back pain
+    - "R07.9"   # Chest pain
+    - "K21.9"   # GERD
+    - "F32.9"   # Depression
+    - "Z00.00"  # General exam
+
+# === BUSINESS RULES ===
+business_rules:
+  # High-value claim thresholds
+  high_value_threshold: 10000
+  very_high_value_threshold: 50000
+  
+  # Aging thresholds (days)
+  aged_claim_threshold: 90
+  critical_aged_threshold: 180
+  
+  # Payment ratio rules
+  unusual_payment_low: 0.1
+  unusual_payment_high: 1.1
+  
+  # Risk scoring weights
+  risk_score_weights:
+    amount_weight: 0.3
+    aging_weight: 0.2
+    payment_ratio_weight: 0.3
+    high_value_weight: 0.2
+
+# === LOGGING CONFIGURATION ===
+logging:
+  level: "INFO"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
+  
+  # File logging
+  file_logging:
+    enabled: true
+    directory: "logs"
+    rotation: "1 day"
+    retention: "30 days"
+    
+  # Console logging
+  console_logging:
+    enabled: true
+    
+  # Structured logging
+  structured_logging:
+    enabled: true
+    include_extra_fields: true
+
+# === MONITORING AND ALERTS ===
+monitoring:
+  # Performance metrics
+  track_execution_time: true
+  track_memory_usage: true
+  track_data_volume: true
+  
+  # Alert thresholds
+  alert_on_failure: true
+  alert_on_slow_processing: true
+  slow_processing_threshold_seconds: 300
+  
+  # Quality alerts
+  alert_on_low_quality: true
+  min_data_quality_score: 0.95
+
+# === SECURITY CONFIGURATION ===
+security:
+  # Data encryption
+  encrypt_sensitive_data: true
+  encryption_key_rotation_days: 90
+  
+  # Access control
+  require_authentication: true
+  audit_access: true
+  
+  # Data masking
+  mask_patient_data: false  # Set to true in non-production environments
+  mask_provider_data: false
+
+# === ENVIRONMENT-SPECIFIC SETTINGS ===
+environments:
+  development:
+    database:
+      source:
+        connection_string: "DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost;DATABASE=claims_dev;UID=dev_user;PWD=dev_password;"
+    logging:
+      level: "DEBUG"
+    validation:
+      strict_validation: false
+      
+  staging:
+    database:
+      source:
+        connection_string: "DRIVER={ODBC Driver 17 for SQL Server};SERVER=staging-db;DATABASE=claims_staging;UID=staging_user;PWD=staging_password;"
+    logging:
+      level: "INFO"
+    validation:
+      strict_validation: true
+      
+  production:
+    database:
+      source:
+        connection_string: "DRIVER={ODBC Driver 17 for SQL Server};SERVER=prod-db;DATABASE=claims_prod;UID=prod_user;PWD=prod_password;"
+    logging:
+      level: "WARNING"
+    validation:
+      strict_validation: true
+    security:
+      mask_patient_data: false
+      mask_provider_data: false
+
+# === API INTEGRATIONS ===
+api_integrations:
+  # External validation services
+  code_validation_service:
+    enabled: true
+    endpoint: "https://api.healthcare-codes.com/validate"
+    timeout_seconds: 10
+    retry_attempts: 3
+    
+  # Notification services
+  notification_service:
+    enabled: true
+    email_endpoint: "https://api.notifications.com/email"
+    sms_endpoint: "https://api.notifications.com/sms"
+    
+  # Analytics service
+  analytics_service:
+    enabled: true
+    endpoint: "https://api.analytics.healthcare.com/metrics"

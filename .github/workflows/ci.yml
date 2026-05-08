@@ -1,0 +1,146 @@
+# Healthcare Claims Processing ETL - CI/CD Pipeline
+# This workflow automates testing and quality checks for our healthcare claims ETL system
+name: Healthcare Claims ETL CI Pipeline
+
+# === TRIGGER SECTION ===
+# When should this workflow run?
+# 'pull_request' - Triggers when someone creates or updates a pull request
+# This is perfect for code review automation before merging to main branch
+on:
+  pull_request:
+    branches: [ main, develop ]
+    # You can also add specific paths to only run when certain files change
+    # paths:
+    #   - 'src/**'
+    #   - 'tests/**'
+    #   - 'requirements.txt'
+
+# === JOB DEFINITION ===
+# A job is a set of steps that execute on the same runner
+jobs:
+  # This job runs all our tests and quality checks
+  test-and-quality-checks:
+    # Display name that appears in GitHub Actions UI
+    name: Run Tests and Quality Checks
+    
+    # === RUNNER CONFIGURATION ===
+    # 'ubuntu-latest' - Use the latest Ubuntu Linux virtual machine
+    # Ubuntu is stable, well-documented, and has great Python support
+    runs-on: ubuntu-latest
+    
+    # === ENVIRONMENT VARIABLES ===
+    # These variables are available to all steps in this job
+    env:
+      PYTHON_VERSION: '3.11'
+      # Set Python to not buffer output - helps with real-time logging
+      PYTHONUNBUFFERED: 1
+    
+    # === STEPS SECTION ===
+    # Steps are the individual commands that run sequentially in the job
+    steps:
+      # === STEP 1: CHECKOUT CODE ===
+      # Download the repository code so the workflow can access it
+      # 'actions/checkout@v4' is the official GitHub Action for this
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        # with: would go here if we needed special checkout options
+        
+      # === STEP 2: SET UP PYTHON ===
+      # Install Python 3.11 on the runner
+      # 'actions/setup-python@v4' handles Python installation and caching
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          # Cache pip dependencies to speed up future runs
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
+          
+      # === STEP 3: INSTALL DEPENDENCIES ===
+      # Install all Python packages needed for our ETL pipeline
+      # requirements.txt contains all our project dependencies
+      - name: Install Python dependencies
+        run: |
+          echo "Installing dependencies from requirements.txt..."
+          pip install -r requirements.txt
+          echo "Dependencies installed successfully!"
+          
+      # === STEP 4: LINTING WITH FLAKE8 ===
+      # Run code style and quality checks
+      # flake8 checks for:
+      # - Code style issues (PEP 8)
+      # - Syntax errors
+          # - Complex code that might be hard to maintain
+      - name: Run flake8 linting
+        run: |
+          echo "Running flake8 linting..."
+          # --max-line-length=88: Allow longer lines (Black formatter default)
+          # --extend-ignore=E203,W503: Ignore some formatting conflicts
+          # --show-source: Show the code that caused the error
+          # --statistics: Show summary of issues found
+          flake8 src/ tests/ \
+            --max-line-length=88 \
+            --extend-ignore=E203,W503 \
+            --show-source \
+            --statistics
+          echo "Linting completed!"
+          
+      # === STEP 5: RUN UNIT TESTS ===
+      # Execute all our test cases to ensure code works correctly
+      # pytest is our testing framework - it finds and runs test files
+      - name: Run pytest unit tests
+        run: |
+          echo "Running unit tests with pytest..."
+          # -v: Verbose output - shows each test name and result
+          # --tb=short: Short traceback format - easier to read
+          # tests/: Directory containing our test files
+          pytest -v --tb=short tests/
+          echo "All tests completed!"
+          
+      # === STEP 6: GENERATE COVERAGE REPORT ===
+      # Measure how much of our code is covered by tests
+      # This helps identify untested code that might have bugs
+      - name: Generate test coverage report
+        run: |
+          echo "Generating coverage report..."
+          # --cov=src: Measure coverage for code in src/ directory
+          # --cov-report=term-missing: Show coverage in terminal with missing lines
+          # --cov-report=xml: Generate XML report for external tools
+          # --cov-fail-under=80: Fail if coverage is below 80%
+          pytest --cov=src \
+                 --cov-report=term-missing \
+                 --cov-report=xml \
+                 --cov-fail-under=80 \
+                 tests/
+          echo "Coverage report generated!"
+          
+      # === STEP 7: UPLOAD COVERAGE ARTIFACT ===
+      # Save the coverage report as an artifact for later review
+      # Artifacts are files stored by GitHub Actions after workflow completion
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        if: always()  # Run this step even if previous steps failed
+        with:
+          # Name of the artifact - appears in GitHub UI
+          name: coverage-report
+          # Path to the file(s) to upload
+          path: coverage.xml
+          # How long to keep the artifact (days)
+          retention-days: 30
+          
+      # === STEP 8: SECURITY SCAN (BONUS) ===
+      # Check for known security vulnerabilities in dependencies
+      # This is especially important for healthcare data processing
+      - name: Run security vulnerability scan
+        run: |
+          echo "Running security scan..."
+          # safety checks our dependencies against known security issues
+          pip install safety
+          safety check --json || true  # Continue even if issues found
+          echo "Security scan completed!"
+
+# === WORKFLOW COMPLETION ===
+# After all steps complete:
+# - If all steps pass: Pull request shows green checkmark ✅
+# - If any step fails: Pull request shows red X ❌ with details
+# - Coverage report is available for download in the Actions tab
