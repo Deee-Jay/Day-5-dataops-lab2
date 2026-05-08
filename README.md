@@ -2,7 +2,9 @@
 
 A comprehensive, beginner-friendly ETL (Extract, Transform, Load) pipeline for processing healthcare claims data from hospital databases to Azure SQL for analytics and reporting.
 
-## 🏥 Project Overview
+## � Current Status: CI/CD Pipeline Active
+
+## �🏥 Project Overview
 
 This project demonstrates modern data engineering practices in healthcare, implementing:
 - **Automated CI/CD** with GitHub Actions
